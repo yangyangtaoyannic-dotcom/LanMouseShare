@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="false" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{E52B27FC-8BBE-46CE-83E1-7F95828F9C2F}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>LanMouseShare.Core</RootNamespace>
+    <AssemblyName>LanMouseShare.Core</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="Control\ControlSessionController.cs" />
+    <Compile Include="Control\InjectionFailureTracker.cs" />
+    <Compile Include="Control\InputRoutingController.cs" />
+    <Compile Include="Control\KnownConflictProcessDetector.cs" />
+    <Compile Include="Configuration\AppConfig.cs" />
+    <Compile Include="Configuration\ConfigStore.cs" />
+    <Compile Include="Crypto\DeviceIdentity.cs" />
+    <Compile Include="Crypto\SecureChannelProtector.cs" />
+    <Compile Include="Crypto\SecureRandom.cs" />
+    <Compile Include="Diagnostics\AppLog.cs" />
+    <Compile Include="Ipc\AgentCommand.cs" />
+    <Compile Include="Ipc\AgentSettingsDto.cs" />
+    <Compile Include="Ipc\PipeConstants.cs" />
+    <Compile Include="Ipc\PeerStateDto.cs" />
+    <Compile Include="Networking\DiscoveryPacket.cs" />
+    <Compile Include="Networking\UdpDiscoveryService.cs" />
+    <Compile Include="Protocol\ClipboardPayload.cs" />
+    <Compile Include="Protocol\ControlPayload.cs" />
+    <Compile Include="Protocol\FileTransferPayload.cs" />
+    <Compile Include="Protocol\InputPayload.cs" />
+    <Compile Include="Protocol\PairingPayload.cs" />
+    <Compile Include="Protocol\ProtocolEnvelope.cs" />
+    <Compile Include="Protocol\ScreenInfoPayload.cs" />
+    <Compile Include="Protocol\TransportFrame.cs" />
+    <Compile Include="Protocol\ProtocolSerializer.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

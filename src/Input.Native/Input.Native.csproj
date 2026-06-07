@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{2DC737EF-7185-4D00-89D2-46375493C820}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>LanMouseShare.Input</RootNamespace>
+    <AssemblyName>LanMouseShare.Input</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Shared.Core\Shared.Core.csproj">
+      <Project>{E52B27FC-8BBE-46CE-83E1-7F95828F9C2F}</Project>
+      <Name>Shared.Core</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="ControlTokenState.cs" />
+    <Compile Include="CursorController.cs" />
+    <Compile Include="DpiCoordinateMapper.cs" />
+    <Compile Include="DesktopEnvironment.cs" />
+    <Compile Include="EdgePushSwitchDetector.cs" />
+    <Compile Include="EdgeSwitchDetector.cs" />
+    <Compile Include="EdgeTransitionMapper.cs" />
+    <Compile Include="InputHook.cs" />
+    <Compile Include="InputInjector.cs" />
+    <Compile Include="NativeMethods.cs" />
+    <Compile Include="RemoteEdgeReturnDetector.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>
