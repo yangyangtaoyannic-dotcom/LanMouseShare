@@ -121,7 +121,8 @@ is_stronger(theirEpoch, theirOwner, myEpoch, myOwner):
 ## 6. 边界与坐标
 
 - 进入：主控端光标越过布局方向边缘 → 记录进入点像素 → `EdgeTransitionMapper.MapEntryToRemote` 映射到对端虚拟屏幕 → 首次 `MouseMove` 用该坐标。
-- 退出（主控端主动）：对端虚拟光标越过同一侧边缘 → 主控端 `MapReturnToLocal` 映射回本机边缘，落点离边缘 **8 px**（`EdgeInset`），避免立刻再次触发。
+- 退出（主控端主动）：对端虚拟光标越过同一侧边缘 → 主控端 `TrackOwnerReturnPush` 判到“推力 ≥ 8 px”即 `ReleaseControlToLocalEdge`，`MapReturnToLocal` 把指针映射回本机边缘，落点离边缘 **8 px**（`EdgeInset`），避免立刻再次触发。
+- fix24 起主控端返回**不再有任何等待式门槛**（fix19 的“先推进 40 px 武装 / 边缘驻留 260 ms / 推力 140 px / 冷却 700 ms”已全部撤掉）；防误触改由“进场落点离返回边 40 px”（`EdgeTransitionMapper.RemoteInset`）承担，A→B 与 B→A 手感对称。
 - 退出（被控端请求）：被控端检测到光标在自己屏幕朝主控方向的边缘继续外移 → 发 `ControlRelease`（含当前坐标/屏幕尺寸/方向）→ 主控端按上式落点。
 - 重新武装：任一次进入/退出后 `arm=false`，必须同时满足“光标离该边缘 ≥ 12 px”且“距上次切换 ≥ 500 ms”才重新武装；否则会出现 0.1.43 那种每秒来回翻转的乒乓。
 

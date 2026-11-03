@@ -27,6 +27,7 @@ namespace LanMouseShare.Agent
         public const string FileTransferComplete = "\u6587\u4EF6\u4F20\u8F93\u5B8C\u6210";
         public const string FileSavedComplete = "\u5DF2\u4FDD\u5B58\u5230\u684C\u9762 Mouse\u4F20\u8F93\u6587\u4EF6 \u6587\u4EF6\u5939\u3002";
         public const string FileTransferFailed = "\u6587\u4EF6\u4F20\u8F93\u5931\u8D25\uFF1A";
+        public const string TransferDirInvalid = "\u9009\u62E9\u7684\u76EE\u5F55\u4E0D\u53EF\u5199\uFF0C\u5DF2\u4FDD\u7559\u539F\u8BBE\u7F6E\u3002";
         public const string HotkeyDuplicate = "\u5FEB\u6377\u952E\u4E0D\u80FD\u91CD\u590D";
         public const string Restore = "\u6062\u590D";
         public const string Pause = "\u6682\u505C";

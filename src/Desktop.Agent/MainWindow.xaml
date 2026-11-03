@@ -34,7 +34,7 @@
             <DockPanel LastChildFill="True">
                 <StackPanel DockPanel.Dock="Left">
                     <TextBlock Text="&#x5C40;&#x57DF;&#x7F51;&#x952E;&#x9F20;&#x5171;&#x4EAB;" FontSize="22" FontWeight="SemiBold" />
-                    <TextBlock x:Name="VersionText" Text="LanMouseShare 0.2.0-beta-fix19" Foreground="#667085" Margin="0,4,0,0" />
+                    <TextBlock x:Name="VersionText" Text="LanMouseShare 0.2.0-beta-fix24" Foreground="#667085" Margin="0,4,0,0" />
                 </StackPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Content="&#x5237;&#x65B0;" Width="72" Click="OnRefreshClicked" />
@@ -112,6 +112,11 @@
                             </Border>
                             <TextBlock x:Name="TransferStatusText" Text="" Foreground="#667085" Margin="0,0,0,6" TextWrapping="Wrap" />
                             <ProgressBar x:Name="TransferProgress" Height="8" Minimum="0" Maximum="100" Value="0" Margin="0,0,0,10" />
+                            <TextBlock x:Name="TransferDirText" Text="" Foreground="#667085" Margin="0,0,0,6" TextWrapping="Wrap" />
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                <Button Content="&#x66F4;&#x6539;&#x63A5;&#x6536;&#x76EE;&#x5F55;&#x2026;" Width="124" Click="OnChangeTransferDirClicked" />
+                                <Button Content="&#x6062;&#x590D;&#x9ED8;&#x8BA4;" Width="88" Margin="8,0,0,0" Click="OnResetTransferDirClicked" />
+                            </StackPanel>
                             <StackPanel Orientation="Horizontal">
                                 <Button Content="&#x53D1;&#x9001;&#x6587;&#x4EF6;&#x2026;" Width="104" Click="OnSendFilesClicked" />
                                 <Button Content="&#x6253;&#x5F00;&#x63A5;&#x6536;&#x6587;&#x4EF6;&#x5939;" Width="128" Margin="8,0,0,0" Click="OnOpenTransferFolderClicked" />
@@ -176,6 +181,7 @@
                                 <TextBlock x:Name="MouseRateText" Grid.Row="1" Grid.Column="2" Text="200Hz" HorizontalAlignment="Right" />
                             </Grid>
                             <CheckBox x:Name="ClipboardEnabledBox" Content="&#x540C;&#x6B65;&#x6587;&#x5B57;&#x548C;&#x56FE;&#x7247;&#x526A;&#x8D34;&#x677F;" IsChecked="True" Checked="OnSettingsChanged" Unchecked="OnSettingsChanged" />
+                            <CheckBox x:Name="ScreenEntryRippleBox" Content="&#x8DE8;&#x5C4F;&#x540E;&#x9AD8;&#x4EAE;&#x9F20;&#x6807;&#x843D;&#x70B9;" IsChecked="True" Checked="OnSettingsChanged" Unchecked="OnSettingsChanged" />
                             <CheckBox x:Name="BlockCornersBox" Content="&#x8DE8;&#x5C4F;&#x8FB9;&#x89D2;&#x963B;&#x6321;" Checked="OnSettingsChanged" Unchecked="OnSettingsChanged" />
                         </StackPanel>
                     </Border>
@@ -259,7 +265,7 @@
 
         <DockPanel Grid.Row="2">
             <TextBlock x:Name="HintText" Text="&#x62D6;&#x5165;&#x666E;&#x901A;&#x6587;&#x4EF6;&#x5373;&#x53EF;&#x53D1;&#x9001;&#xFF1B;&#x6682;&#x505C;&#x540E;&#x952E;&#x9F20;&#x3001;&#x526A;&#x8D34;&#x677F;&#x548C;&#x6587;&#x4EF6;&#x53D1;&#x9001;&#x90FD;&#x4F1A;&#x505C;&#x6B62;&#x3002;" Foreground="#667085" DockPanel.Dock="Left" />
-            <TextBlock Text="0.2.0-beta-fix19" HorizontalAlignment="Right" Foreground="#667085" />
+            <TextBlock Text="0.2.0-beta-fix24" HorizontalAlignment="Right" Foreground="#667085" />
         </DockPanel>
     </Grid>
 </Window>

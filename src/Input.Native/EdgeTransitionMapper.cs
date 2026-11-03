@@ -5,7 +5,10 @@ namespace LanMouseShare.Input
     public static class EdgeTransitionMapper
     {
         private const int EdgeInset = 8;
-        private const int RemoteInset = 8;
+        // fix24：进场落点从 8px 挪到 40px。fix19 时"右键落错端"的根因就是落点贴着返回边，
+        // 手指抖几像素就被判成"要回去"；把落点推离返回边之后，返回手势就可以做成
+        // "越边即回"而不必再靠 260ms 驻留/140px 推力去拖时间。
+        private const int RemoteInset = 40;
 
         public static Point MapEntryToRemote(Point entryPoint, Size localScreen, Size remoteScreen, string direction)
         {

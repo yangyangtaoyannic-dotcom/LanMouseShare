@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -529,6 +529,8 @@ namespace LanMouseShare.Service
                     StartWithWindows = _config.StartWithWindows,
                     MinimizeToTrayOnClose = _config.MinimizeToTrayOnClose,
                     BlockScreenCorners = _config.BlockScreenCorners,
+                    ScreenEntryRippleEnabled = _config.ScreenEntryRippleEnabled,
+                    IncomingDirectory = _config.IncomingDirectory ?? string.Empty,
                     ActiveTargetDeviceId = string.IsNullOrWhiteSpace(_activeTargetDeviceId) ? _config.DeviceId : _activeTargetDeviceId,
                     RunAsAdministratorByDefault = _config.RunAsAdministratorByDefault,
                     PairingStatus = pairingStatus,
@@ -1018,6 +1020,9 @@ namespace LanMouseShare.Service
                 _config.StartWithWindows = settings.StartWithWindows;
                 _config.MinimizeToTrayOnClose = settings.MinimizeToTrayOnClose;
                 _config.BlockScreenCorners = settings.BlockScreenCorners;
+                _config.ScreenEntryRippleEnabled = settings.ScreenEntryRippleEnabled;
+                // fix22：空字符串表示“用默认桌面”，不要写 null，否则旧配置反序列化后会把界面显示成空白。
+                _config.IncomingDirectory = settings.IncomingDirectory == null ? string.Empty : settings.IncomingDirectory.Trim();
                 _config.RunAsAdministratorByDefault = settings.RunAsAdministratorByDefault;
                 _config.ShareRole = ShareRoleValues.Normalize(settings.ShareRole);
                 _config.ControllerAddress = string.IsNullOrWhiteSpace(settings.ControllerAddress) ? null : settings.ControllerAddress.Trim();
@@ -1045,6 +1050,8 @@ namespace LanMouseShare.Service
                 " startWithWindows=" + settings.StartWithWindows +
                 " minimizeToTray=" + settings.MinimizeToTrayOnClose +
                 " blockCorners=" + settings.BlockScreenCorners +
+                " ripple=" + settings.ScreenEntryRippleEnabled +
+                " incomingDir=" + (string.IsNullOrEmpty(_config.IncomingDirectory) ? "default" : _config.IncomingDirectory) +
                 " runAsAdminDefault=" + settings.RunAsAdministratorByDefault +
                 " shareRole=" + ShareRoleValues.DisplayName(_config.ShareRole) +
                 " controllerAddress=" + (_config.ControllerAddress ?? "auto") +
@@ -1450,8 +1457,23 @@ namespace LanMouseShare.Service
         /// system profile. Received files must land where the interactive user can see them,
         /// therefore the public desktop is used.
         /// </summary>
-        private static string ResolveIncomingFolder()
+        private string ResolveIncomingFolder()
         {
+            // fix22：用户自定义接收目录优先。服务以 LocalSystem 跑，能不能写要现场探一次；
+            // 探不进去就退回下面的公共桌面逻辑，绝不让一次传输因为配置坏掉而失败。
+            var custom = _config != null ? _config.IncomingDirectory : null;
+            if (!string.IsNullOrWhiteSpace(custom))
+            {
+                var resolved = TryPrepareDirectory(custom.Trim());
+                if (resolved != null)
+                {
+                    AppLog.Debug("transfer.dir.custom", "path=" + resolved);
+                    return resolved;
+                }
+
+                AppLog.Warn("transfer.dir.custom.invalid path=" + custom);
+            }
+
             var publicRoot = Environment.GetEnvironmentVariable("PUBLIC");
             if (string.IsNullOrEmpty(publicRoot) || !Directory.Exists(publicRoot))
             {
@@ -1470,6 +1492,33 @@ namespace LanMouseShare.Service
             }
 
             return Path.Combine(desktop, "Mouse传输文件");
+        }
+
+        /// <summary>
+        /// fix22：确认目录存在且真的能写。系统盘根目录、只读网络盘、被拔掉的 U 盘都会在这里被挡下来，
+        /// 由调用方退回默认目录，而不是让文件流写到一半才抛异常。
+        /// </summary>
+        private static string TryPrepareDirectory(string path)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    return null;
+                }
+
+                var full = Path.GetFullPath(path);
+                Directory.CreateDirectory(full);
+                var probe = Path.Combine(full, ".lms-write-probe");
+                File.WriteAllText(probe, "1");
+                File.Delete(probe);
+                return full;
+            }
+            catch (Exception ex)
+            {
+                AppLog.Warn("transfer.dir.probe.failed path=" + path + " " + ex.GetType().Name + ": " + ex.Message);
+                return null;
+            }
         }
 
         private string CancelIncomingTransfers()

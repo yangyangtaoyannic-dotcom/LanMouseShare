@@ -1,8 +1,8 @@
-# LanMouseShare 0.2.0-beta-fix19 项目说明与使用指南
+# LanMouseShare 0.2.0-beta-fix24 项目说明与使用指南
 
 LanMouseShare 是一个局域网内两台 Windows 电脑共享鼠标、键盘、剪贴板和文件传输的小工具：鼠标滑过屏幕物理边缘就能接管另一台，键盘、剪贴板、文件都跟着当前控制目标走，不需要 KVM 硬件。
 
-当前版本 `0.2.0-beta-fix19`（`AssemblyFileVersion 0.2.1.4`，.NET Framework 4.8 + WPF）。核心结构是「租约 + 确认」的控制状态机：角色只有 `Idle` / `Owner` / `Target` 三种，被控端永远不能自封主控，任一侧掉线、崩溃或拔网线都会在 1 秒内回到空闲，不会出现两端同时自认主控、键鼠一起卡死的情况。
+当前版本 `0.2.0-beta-fix24`（`AssemblyFileVersion 0.2.1.9`，.NET Framework 4.8 + WPF）。核心结构是「租约 + 确认」的控制状态机：角色只有 `Idle` / `Owner` / `Target` 三种，被控端永远不能自封主控，任一侧掉线、崩溃或拔网线都会在 1 秒内回到空闲，不会出现两端同时自认主控、键鼠一起卡死的情况。
 
 这一版相对早期 `0.1.x` 的关键变化：
 
@@ -62,7 +62,7 @@ flowchart TD
     D --> U["鼠标滑过对应边缘开始跨屏"]
 ```
 
-1. 每台电脑运行 `dist\LanMouseShare-0.2.0-beta-fix19\LanMouseShareSetup.exe`，默认装到 `C:\Program Files\LanMouseShare`。
+1. 每台电脑运行 `dist\LanMouseShare-0.2.0-beta-fix24\LanMouseShareSetup.exe`，默认装到 `C:\Program Files\LanMouseShare`。
 2. 安装后防火墙需放行 **UDP 47531 / 47533 / 47534** 与 **TCP 47532 / 47540 / 47541**。安装器会自动加规则；若被组策略或第三方安全软件覆盖，手工补上即可，否则跨屏会“能看到对方但切不过去”。
 3. 两台都启动 Agent，在“配对”里输入同一个配对码，一端“发起”、另一端“同意”。配对成功后两端都会显示“已配对”。
 4. 在“屏幕位置”里设置对端的方位（上/下/左/右）。方向决定从哪条边切出去。
@@ -77,7 +77,7 @@ flowchart TD
 - **自动恢复**：任一端掉线、崩溃、拔网线，另一端在 1 秒内回到空闲，不会卡死。
 - **键盘跟随**：键盘输入始终送到当前控制目标，不留在本机。
 - **剪贴板共享**：文本与图片双向同步，可在界面关闭。剪贴板读写全部在一条常驻 STA 线程上执行（fix16），写失败重试上限 3 次，不会堵住低级鼠标钩子所在的 UI 线程。
-- **文件传输**：把文件拖进窗口，或在资源管理器里右键「传输到对端」，文件**直接落到对方桌面**（fix10；不再套 `Mouse传输文件` 子目录）。
+- **文件传输**：把文件拖进窗口，或在资源管理器里右键「传输到对端」，文件**直接落到对方桌面**（fix10；不再套 `Mouse传输文件` 子目录）；fix22 起接收目录可自定义。
 - **不再支持“复制文件 → 对端 Ctrl+V”**：fix10 起彻底关闭，被控端收到文件粘贴请求会直接忽略（日志 `clipboard.files.ignored reason=disabled-fix10`）。
 - **配对保护**：配对码 + 加密通道；日志推送可在界面关闭（关闭后仅保存本机）。
 - **桌面集成**：托盘常驻、可选开机自启、统一应用图标（fix18）、三个卸载入口（fix13）。
@@ -122,7 +122,7 @@ flowchart TD
 ## 文件传输
 
 1. 在发送方把文件拖进 Agent 窗口，或在资源管理器里右键文件/文件夹选「传输到对端」。
-2. 接收方直接落盘到**当前用户桌面**（用户桌面不可写时依次退到公共桌面、下载、LocalAppData）。
+2. 接收方直接落盘到**当前用户桌面**（用户桌面不可写时依次退到公共桌面、下载、LocalAppData）；**fix22 起可在 Agent 的「文件传输」卡片里「更改接收目录…」指定任意目录**（每台各设各的，目录不可写时自动退回桌面并记 `transfer.dir.custom.invalid`）。
 3. 传输中可在界面“取消传输”；文件较大时会有进度显示。
 
 说明：接收目录的兜底顺序见 `src\Desktop.Agent\MainWindow.xaml.cs` 的目录解析逻辑；Service 以 LocalSystem 运行时另有公共桌面兜底路径。
@@ -220,7 +220,7 @@ sc delete LanMouseShare
 
 ### 切过去马上又被弹回本机
 
-fix19 之前这是已知问题：远端指针落点离返回边只有 8px，快速左扫会被当成“要退回”。fix19 加了武装距离 / 驻留时间 / 推力阈值 / 冷却四道闸，请确认两端都是 `0.2.0-beta-fix19`。
+fix19 之前这是已知问题：远端指针落点离返回边只有 8px，快速左扫会被当成“要退回”。fix19 加了武装距离 / 驻留时间 / 推力阈值 / 冷却四道闸；**fix24 起这四道闸已撤掉**，改为“越过边缘即回切 + 进场落点退到 40px”，请确认两端都是 `0.2.0-beta-fix24`。
 
 ### 复制文本后对端键鼠失灵、画面还在
 
@@ -229,22 +229,22 @@ fix16 曾把 `IsClipboardEnabled()` 挪到剪贴板线程执行，而它读的�
 ## 发布产物
 
 ```text
-dist\LanMouseShare-0.2.0-beta-fix19\LanMouseShareSetup.exe      单文件安装包
-dist\LanMouseShare-0.2.0-beta-fix19\LanMouseShare-0.2.0-beta-fix19-source.zip
-dist\LanMouseShare-0.2.0-beta-fix19\Agent\              桌面端可执行文件
-dist\LanMouseShare-0.2.0-beta-fix19\Service\            服务端可执行文件
-dist\LanMouseShare-0.2.0-beta-fix19\Scripts\            安装、卸载、日志、回退脚本
-dist\LanMouseShare-0.2.0-beta-fix19\Docs\               说明文档
-dist\LanMouseShare-0.2.0-beta-fix19\README.txt          安装包说明
-dist\LanMouseShare-0.2.0-beta-fix19\PROJECT_GUIDE.md    完整说明
-dist\LanMouseShare-0.2.0-beta-fix19\使用说明-先看我.md  简明说明
+dist\LanMouseShare-0.2.0-beta-fix24\LanMouseShareSetup.exe      单文件安装包
+dist\LanMouseShare-0.2.0-beta-fix24\LanMouseShare-0.2.0-beta-fix24-source.zip
+dist\LanMouseShare-0.2.0-beta-fix24\Agent\              桌面端可执行文件
+dist\LanMouseShare-0.2.0-beta-fix24\Service\            服务端可执行文件
+dist\LanMouseShare-0.2.0-beta-fix24\Scripts\            安装、卸载、日志、回退脚本
+dist\LanMouseShare-0.2.0-beta-fix24\Docs\               说明文档
+dist\LanMouseShare-0.2.0-beta-fix24\README.txt          安装包说明
+dist\LanMouseShare-0.2.0-beta-fix24\PROJECT_GUIDE.md    完整说明
+dist\LanMouseShare-0.2.0-beta-fix24\使用说明-先看我.md  简明说明
 ```
 
 打包步骤：
 
 1. 构建 Release：`MSBuild.exe LanMouseShare.sln /t:Build /p:Configuration=Release`。
-2. 生成便携包：`powershell -ExecutionPolicy Bypass -File scripts\Quick-Build.ps1 -Version "0.2.0-beta-fix19"`。
-3. 生成安装包：`powershell -ExecutionPolicy Bypass -File scripts\Build-Installer.ps1 -Version "0.2.0-beta-fix19"`。脚本把 `Agent`、`Service`、`Scripts`、`Docs` 和根目录 md 压成一个 `payload.zip` 嵌进 `LanMouseShareSetup.exe`，安装时解压到安装目录。
+2. 生成便携包：`powershell -ExecutionPolicy Bypass -File scripts\Quick-Build.ps1 -Version "0.2.0-beta-fix24"`。
+3. 生成安装包：`powershell -ExecutionPolicy Bypass -File scripts\Build-Installer.ps1 -Version "0.2.0-beta-fix24"`。脚本把 `Agent`、`Service`、`Scripts`、`Docs` 和根目录 md 压成一个 `payload.zip` 嵌进 `LanMouseShareSetup.exe`，安装时解压到安装目录。
 4. 每个版本保留独立目录，方便回退。
 
 ## 版本时间线
@@ -257,3 +257,8 @@ dist\LanMouseShare-0.2.0-beta-fix19\使用说明-先看我.md  简明说明
 - `0.2.0-beta-fix16` / `fix17`：剪贴板移出 UI 线程；修跨线程读界面开关导致进程退出。
 - `0.2.0-beta-fix18`：整套图标统一（窗口、任务栏、托盘、安装包）。
 - `0.2.0-beta-fix19`：返回手势加武装 / 驻留 / 阈值 / 冷却，消除“刚切过去就被弹回、点击落在本机”。
+- `0.2.0-beta-fix20`：跨屏切到另一台后，被控端在鼠标落点画一圈向外扩散的波纹，提示指针位置；「输入设置」里新增「跨屏后高亮鼠标落点」勾选框，可随时关闭。
+- `0.2.0-beta-fix21`：波纹改成水波纹并贴住指针跟随移动、出现即全亮、约 1 秒消失。
+- `0.2.0-beta-fix22`：文件接收目录可自定义（「文件传输」卡片里「更改接收目录…」，不可写时自动退回桌面，每台各设各的）。
+- `0.2.0-beta-fix23`：跨屏提示补回“返回本机”这个方向——控制权回到本机时本机也画水波纹，并用 600 毫秒去抖保证一次跨屏只出现一圈。
+- `0.2.0-beta-fix24`：跨屏来回手感对称——返回本机不再需要“先推 140px、在边缘停 260ms”，越过边缘即回切；进场落点从 8px 挪到 40px，快速扫过不再误触。

@@ -112,6 +112,14 @@ namespace LanMouseShare.Core.Ipc
 
         [DataMember(Order = 36)]
         public bool LogTransferEnabled { get; set; }
+
+        /// <summary>fix20：跨屏切到本机时是否在鼠标落点画波纹。</summary>
+        [DataMember(Order = 37)]
+        public bool ScreenEntryRippleEnabled { get; set; }
+
+        /// <summary>fix22：本机接收文件的目录，空 = 默认（桌面）。</summary>
+        [DataMember(Order = 38)]
+        public string IncomingDirectory { get; set; }
     }
 
     public static class PairingStatuses

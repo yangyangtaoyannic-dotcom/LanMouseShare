@@ -8,3 +8,4 @@ buildcheck/
 *.log
 dist/
 .dsh/
+.dsh-meow/

@@ -84,6 +84,17 @@ namespace LanMouseShare.Core.Configuration
         [DataMember(Order = 26)]
         public bool UseNewControllers { get; set; }
 
+        /// <summary>fix20：跨屏切到本机时，在被控端鼠标落点画一圈扩散波纹。</summary>
+        [DataMember(Order = 27)]
+        public bool ScreenEntryRippleEnabled { get; set; }
+
+        /// <summary>
+        /// fix22：接收文件的落地目录。空字符串 = 走原来的默认候选链（桌面 → 下载 → LocalAppData）。
+        /// 每台机器各设各的：对端传过来的文件按“接收方自己”的这项配置落地。
+        /// </summary>
+        [DataMember(Order = 28)]
+        public string IncomingDirectory { get; set; }
+
         public static AppConfig CreateDefault(string deviceId, string deviceName, byte[] protectedLocalSecret)
         {
             return new AppConfig
@@ -94,6 +105,7 @@ namespace LanMouseShare.Core.Configuration
                 TrustedDevices = new List<TrustedDevice>(),
                 Layout = new LayoutConfig { PeerDirection = "Right" },
                 ClipboardEnabled = true,
+                IncomingDirectory = string.Empty,
                 ReleaseHotkey = "Ctrl+Alt+Pause",
                 PauseHotkey = "Ctrl+F11",
                 StopControlHotkey = "Ctrl+F10",
@@ -101,6 +113,7 @@ namespace LanMouseShare.Core.Configuration
                 StartWithWindows = false,
                 MinimizeToTrayOnClose = false,
                 BlockScreenCorners = false,
+                ScreenEntryRippleEnabled = true,
                 RunAsAdministratorByDefault = false,
                 MouseSpeedMultiplier = 1.0,
                 MouseUpdateRateHz = 200,

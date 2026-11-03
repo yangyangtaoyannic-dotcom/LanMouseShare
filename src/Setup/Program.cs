@@ -17,9 +17,9 @@ namespace LanMouseShare.Setup
         private const string DisplayName = "LAN Mouse Share";
         private const string AgentRunName = "LanMouseShare.Agent";
         /// <summary>安装器自身的数字版本，只用来判断"是否已装同等或更新的包"，必须单调递增。</summary>
-        private const string SetupVersion = "0.2.4";
+        private const string SetupVersion = "0.2.7";
         /// <summary>对外展示的产品版本（设置 → 应用里看到的那个），跟 Agent 版本保持一致。</summary>
-        private const string AppVersion = "0.2.0-beta-fix19";
+        private const string AppVersion = "0.2.0-beta-fix24";
         private const string UninstallRegistryKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\LanMouseShare";
         private const string ShellMenuKeyFile = @"Software\Classes\*\shell\LanMouseShareSend";
         private const string ShellMenuKeyDirectory = @"Software\Classes\Directory\shell\LanMouseShareSend";

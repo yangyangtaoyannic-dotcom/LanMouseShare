@@ -6,5 +6,5 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyProduct("LAN Mouse Share")]
 [assembly: AssemblyCompany("LanMouseShare")]
 [assembly: AssemblyVersion("0.2.1.0")]
-[assembly: AssemblyFileVersion("0.2.1.4")]
+[assembly: AssemblyFileVersion("0.2.1.9")]
 [assembly: ComVisible(false)]

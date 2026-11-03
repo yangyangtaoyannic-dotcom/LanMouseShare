@@ -78,6 +78,7 @@
     <Compile Include="RawMouseInputMonitor.cs" />
     <Compile Include="RemoteInputSender.cs" />
     <Compile Include="SendRequestChannel.cs" />
+    <Compile Include="ScreenEntryRippleWindow.cs" />
     <Compile Include="ShellContextMenu.cs" />
     <Compile Include="StartupTaskManager.cs" />
     <Compile Include="UiText.cs" />

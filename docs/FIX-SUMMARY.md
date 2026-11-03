@@ -1,4 +1,125 @@
-# 修复总结 - 0.2.0-beta-fix19（含 fix1～fix18）
+# 修复总结 - 0.2.0-beta-fix24（含 fix1～fix23）
+
+## 🆕 fix24：跨屏来回对称，返回不再需要“多推一段”（2026-11-03 傍晚）
+
+### 需求
+
+- 用户：「从 a 到 b 一瞬间过去，从 b 到 a 则是要多走一段距离才能跨屏 这是为什么能改吗」，随后要求两边完全对称、返回接近瞬间。
+
+### 原因
+
+- fix19 为修“右键菜单弹在 A 上”，在返回路径上加了三道**等待式**门槛：先推进 40px 武装、在返回边累计驻留 260ms、累计推力 140px，回切后还有 700ms 冷却；而 A→B 走的是普通越边路径，没有任何门槛，于是两个方向手感差一截。
+
+### 改动
+
+- `src/Desktop.Agent/MainWindow.xaml.cs`：`OwnerReturnPushThreshold` 140 → **8**、`OwnerReturnArmMs` 400 → **0**、`OwnerReturnArmDistance` 40 → **0**、`OwnerReturnDwellMs` 260 → **0**、`OwnerReturnCooldownMs` 700 → **200**；`TrackOwnerReturnPush` 去掉武装判定与驻留判定（保留推力累计与日志）。
+- `src/Input.Native/EdgeTransitionMapper.cs`：`RemoteInset` 8 → **40**。进场落点离返回边 40px，快速扫过 / 手抖不再立刻弹回——fix19 那个右键落错端的根因是“落点贴着返回边”，这里把根因挪走，而不是用计时器拖慢用户。
+- `tests/Shared.Core.Tests/Program.cs`：`MapEntryToRemote` 的进场断言 8 → 40。
+- 版本 0.2.0-beta-fix24，`AssemblyFileVersion 0.2.1.9`，`SetupVersion 0.2.7`。
+
+### 验证
+
+- `MSBuild LanMouseShare.sln` 0 error（仅既有 `CS0162` / `CS0067`）。
+- `LanMouseShare.Tests.exe` → `All tests passed.`
+- 待实机：两个方向推过边缘应立刻回切；`mouse.return.push` 的 `total` 不再累积到上百像素。
+
+## 🆕 fix23：返回本机也画波纹，600 毫秒去抖（2026-11-03 晚）
+
+### 症状
+
+- fix22 之后两个方向不对称：从本机跨到对端有波纹，**从对端返回本机时本机没有任何提示**。
+
+### 根因
+
+- fix22 为了去掉“主控端边缘多画一圈”，把 `ReleaseControlToLocalEdge` 里的 `ShowScreenEntryRipple("local")` 整个删掉了。而“控制权回到本机”正是本机唯一会给指针画波纹的时机，删掉之后这个方向就没有任何提示。
+
+### 改动
+
+- `src/Desktop.Agent/MainWindow.xaml.cs`：恢复 `ReleaseControlToLocalEdge` 里的 `ShowScreenEntryRipple("local")`（指针刚被设回本机屏幕之后）。
+- `src/Desktop.Agent/MainWindow.xaml.cs`：新增 `RippleMinGapMs = 600` 与 `_lastRippleUtc`；`ShowScreenEntryRipple` 在距上一次不足 600ms 时直接跳过并记 `ripple.skip`（带 `gap=`），保证一次跨屏只出现一圈，不会 target 与 local 两次触发叠在一起。
+- `src/Desktop.Agent/ScreenEntryRippleWindow.cs`：`ShowAtCursor` 改为返回 `bool`（取不到光标位置时返回 false），只有真正画出波纹才更新去抖时间戳。
+- 版本 0.2.0-beta-fix24，`AssemblyFileVersion 0.2.1.9`，`SetupVersion 0.2.6`。
+
+### 验证
+
+- `MSBuild LanMouseShare.sln` 0 error（仅既有 `CS0162` / `CS0067`）。
+
+## 🆕 fix22：接收目录可自定义，返回方向不再多画波纹（2026-11-03 傍晚）
+
+### 症状
+
+- 用电脑 A 控制电脑 B、再从 B 返回 A 时，**B 自己屏幕的边缘也会概率性出现一圈波纹**——B 是主控端，物理指针从没离开过 B，这圈提示没有意义。
+- 文件接收目录写死在桌面，想放到 `D:\接收` 或移动硬盘上做不到。
+
+### 根因
+
+- fix21 在 `ReleaseControlToLocalEdge`（主控端把控制权收回本机时走的路）里也调了 `ShowScreenEntryRipple("local")`。主控端的物理指针一直在自己屏幕上，只有“刚被接管”的那一端才需要提示。
+- 日志证据：本机（主控端）当天 20+ 条 `ripple.show trigger=local`，对端（被控端）41 条 `trigger=target` 且显示正常。
+
+### 改动
+
+- `src/Desktop.Agent/MainWindow.xaml.cs`：删掉 `ReleaseControlToLocalEdge` 里的波纹调用，只保留“变成 Target”边沿的 `trigger=target`。（**该做法在 fix23 被修正**：返回本机这个方向仍需提示，改为恢复调用 + 600ms 去抖。）
+- `src/Shared.Core/Configuration/AppConfig.cs`：新增 `IncomingDirectory`（Order 28，空 = 默认桌面）。
+- `src/Shared.Core/Ipc/AgentSettingsDto.cs` / `PeerStateDto.cs`：各加 `IncomingDirectory`（Order 18 / 38）下发与回填。
+- `src/Host.Service/PeerCoordinator.cs`：`ApplySettings` 落 `config.json`（空串归一化，日志带 `incomingDir=`）；`ResolveIncomingFolder()` 优先用自定义目录，`TryPrepareDirectory()` 写探针失败则退回公共桌面并记 `transfer.dir.custom.invalid`。
+- `src/Desktop.Agent/MainWindow.xaml` + `.xaml.cs`：文件传输卡片显示当前接收目录，新增「更改接收目录…」（`FolderBrowserDialog`）与「恢复默认」；`GetTransferDirectory()` 优先用配置目录，探针失败记 `transfer.dir.custom.invalid` 后退回原候选链（桌面 → 公共桌面 → 下载 → LocalAppData）。
+
+### 验收
+
+- `MSBuild LanMouseShare.sln -t:Build -p:Configuration=Release` → 0 error（仅既有 `CS0162` / `CS0067`）。
+- 配置链路：`config.json` 出现 `IncomingDirectory`，重启保留；「恢复默认」清空回桌面。
+- 日志：改后本机不再出现 `ripple.show trigger=local`，对端仍为 `trigger=target`。
+
+## 🆕 fix21：水波纹跟着鼠标走，1 秒消失，回来也提示（2026-11-03 傍晚）
+
+### 症状
+
+- fix20 的波纹画在“跨屏落点”上（进场点固定在对端 x=8），用户要的是**跟着鼠标走**的提示；
+- 从 B 推回 A 时 A 上完全不显示——因为 A 走的是“主控端 → 空闲”的返回路径，
+  从来不进入 `Target` 状态，而 fix20 只在“刚变成 Target”的边沿触发。
+
+### 改动
+
+- `src/Desktop.Agent/ScreenEntryRippleWindow.cs` 重写为跟随式水波纹覆盖层：窗口出现即全亮（无淡入），
+  `DispatcherTimer`（16ms、`DispatcherPriority.Render`）每拍重新 `GetCursorPos` 并移动窗口；
+  同时 4 圈波纹按 190ms 错开出生，各自从 10px 扩到 82px（缓出）并随扩散降低透明度，
+  整条提示 1.0 秒后自关、最后 180ms 整体淡出；沿用 `WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW`。
+- `src/Desktop.Agent/MainWindow.xaml.cs`：`ShowScreenEntryRipple(string trigger)` 多一个日志触发源参数；
+  除“变成 Target”外，`ReleaseControlToLocalEdge` 在 `CursorController.SetPosition(...)` 之后也调一次（`trigger=local`），
+  所以控制权回到本机时同样有提示。
+
+### 验收
+
+- `Desktop.Agent` Release 编译 0 error（仅既有 `CS0162` / `CS0067`）。
+- 反射烟测（水波纹版）：t=150ms 只有第 1 圈可见（直径 81px、透明度 0.69）；t=400ms 三圈同时可见（148/103/25px，透明度 0.23/0.56/0.98）；t=800ms 三圈接近扩满（164/164/151px）且透明度趋 0；窗口位置随光标变化（1071,940 → 792,959 → 1004,905，跟随生效）；t=1150ms 窗口已关闭（总时长 1 秒）。
+
+
+
+## 🆕 fix20：跨屏后给鼠标落点画一圈波纹（2026-11-03 下午）
+
+需求：“增加一个按钮打开功能就是跨屏后的鼠标有波纹，这样跨屏后好更快的注意到鼠标。”
+
+### 做法
+
+- 新增 `src/Desktop.Agent/ScreenEntryRippleWindow.cs`：无边框、全透明、置顶，`ShowActivated=false`、
+  `IsHitTestVisible=false`，并在 `GWL_EXSTYLE` 上加 `WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW`，
+  所以它既不抢焦点也不吃点击；金黄（#FFD640）+ 白两圈在 620ms 内从 0.18 倍扩散到 1 倍并淡出，
+  播完自动 `Close()`，另有 1200ms 兜底定时器防止残留透明窗口。
+- `src/Desktop.Agent/MainWindow.xaml`：输入设置里新增「跨屏后高亮鼠标落点」勾选框 `ScreenEntryRippleBox`。
+- `src/Desktop.Agent/MainWindow.xaml.cs`：`SyncLinkFlags` 里用 `_wasTargetRole` 识别“刚刚变成 Target”的边沿，
+  调 `ShowScreenEntryRipple()`；非 UI 线程会先 `Dispatcher.BeginInvoke` 回来，再按 `VisualTreeHelper.GetDpi`
+  换算 DPI 后用 `GetCursorPos` 定位，因此只在被控端出现、且位置就是指针落点。
+- 配置链路：`AppConfig.ScreenEntryRippleEnabled`（默认 true，`Order = 27`）→ `AgentSettingsDto.Order = 17`
+  → `PeerCoordinator.ApplySettings` 落盘（设置日志多了 `ripple=`）→ `PeerStateDto.Order = 37` 回传界面回填勾选框。
+
+### 验收
+
+- `LanMouseShare.sln` Release 编译 0 error（只有既有的 `CS0162` / `CS0067` 两个 warning）。
+- 反射烟测：窗口 `visible=True topmost=True showActivated=False hitTestVisible=False`；离屏渲染出 2554 个
+  非透明像素、外沿 118×118（144×144 窗口内居中），约 600ms 后自动关闭。
+- `AppConfig` / `AgentSettingsDto` / `PeerStateDto` 三个类型的 `ScreenEntryRippleEnabled` JSON 往返均为 true。
+
+
 
 ## 🆕 fix19：跨屏后点右键，右键菜单弹在本机（2026-11-03 上午）
 

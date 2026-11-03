@@ -282,14 +282,14 @@ namespace LanMouseShare.Tests
             }
 
             var xaml = File.ReadAllText(xamlPath);
-            Assert(xaml.Contains("LanMouseShare 0.2.0-beta-fix19") &&
+            Assert(xaml.Contains("LanMouseShare 0.2.0-beta-fix24") &&
                    xaml.Contains("&#x5C40;&#x57DF;&#x7F51;&#x952E;&#x9F20;&#x5171;&#x4EAB;") &&
                    xaml.Contains("&#x8FDE;&#x63A5;&#x72B6;&#x6001;"),
-                "Agent UI should use 0.2.0-beta-fix19 and Chinese XML entities.");
+                "Agent UI should use 0.2.0-beta-fix24 and Chinese XML entities.");
 
-            Assert(File.ReadAllText(appPath).Contains("AppVersion = \"0.2.0-beta-fix19\""), "Agent version should be 0.2.0-beta-fix19.");
-            Assert(File.ReadAllText(setupPath).Contains("SetupVersion = \"0.2.4\""), "Setup version should stay numeric for upgrade comparison.");
-            Assert(File.ReadAllText(scriptPath).Contains("$Version = \"0.2.0-beta-fix19\""), "Build script default version should be 0.2.0-beta-fix19.");
+            Assert(File.ReadAllText(appPath).Contains("AppVersion = \"0.2.0-beta-fix24\""), "Agent version should be 0.2.0-beta-fix24.");
+            Assert(File.ReadAllText(setupPath).Contains("SetupVersion = \"0.2.7\""), "Setup version should stay numeric for upgrade comparison.");
+            Assert(File.ReadAllText(scriptPath).Contains("$Version = \"0.2.0-beta-fix24\""), "Build script default version should be 0.2.0-beta-fix24.");
         }
 
         private static void ConflictProcessDetectionWorks()
@@ -453,7 +453,7 @@ namespace LanMouseShare.Tests
             var remote = new Size(1600, 900);
 
             var rightEntry = EdgeTransitionMapper.MapEntryToRemote(new Point(799, 300), local, remote, "Right");
-            Assert(rightEntry.X == 8 && rightEntry.Y == 450,
+            Assert(rightEntry.X == 40 && rightEntry.Y == 450,
                 "Right entry should preserve Y ratio on the remote screen.");
 
             var leftReturn = EdgeTransitionMapper.MapReturnToLocal(new Point(0, 450), remote, local, "Left");
@@ -461,7 +461,7 @@ namespace LanMouseShare.Tests
                 "Left return should land 8px inside the local edge to avoid re-triggering the switch.");
 
             var downEntry = EdgeTransitionMapper.MapEntryToRemote(new Point(400, 599), local, remote, "Down");
-            Assert(downEntry.X == 800 && downEntry.Y == 8,
+            Assert(downEntry.X == 800 && downEntry.Y == 40,
                 "Down entry should preserve X ratio on the remote screen.");
 
             var upReturn = EdgeTransitionMapper.MapReturnToLocal(new Point(800, 0), remote, local, "Up");
@@ -580,7 +580,7 @@ namespace LanMouseShare.Tests
         private static void BuildVersionIsConsistent()
         {
             var expected = BuildInfo.Version;
-            Assert(expected == "0.2.0-beta-fix19", "Build version should be 0.2.0-beta-fix19.");
+            Assert(expected == "0.2.0-beta-fix24", "Build version should be 0.2.0-beta-fix24.");
             Assert(AppLog.Version == expected, "Log header version should follow BuildInfo.");
 
             var agentPath = Path.Combine("src", "Desktop.Agent", "MainWindow.xaml.cs");
@@ -596,7 +596,7 @@ namespace LanMouseShare.Tests
             Assert(File.ReadAllText(agentPath).Contains("AppVersion = \"" + expected + "\""),
                 "Agent version should match BuildInfo.");
             // SetupVersion 保持纯数字（升级比较依赖 Version.TryParse），单独维护，必须比上一版大。
-            Assert(File.ReadAllText(setupPath).Contains("SetupVersion = \"0.2.4\""),
+            Assert(File.ReadAllText(setupPath).Contains("SetupVersion = \"0.2.7\""),
                 "Setup version should stay numeric (0.2.4) for upgrade comparison.");
             Assert(File.ReadAllText(scriptPath).Contains("$Version = \"" + expected + "\""),
                 "Build script version should match BuildInfo.");

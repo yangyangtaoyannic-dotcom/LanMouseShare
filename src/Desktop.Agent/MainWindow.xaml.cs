@@ -7,6 +7,7 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 using LanMouseShare.Core.Configuration;
 using LanMouseShare.Core.Control;
@@ -22,7 +23,7 @@ namespace LanMouseShare.Agent
 {
     public partial class MainWindow : Window
     {
-        private const string AppVersion = "0.2.0-beta-fix19";
+        private const string AppVersion = "0.2.0-beta-fix24";
         private const int CornerBlockPixels = 80;
 
         // fix15：边角阻挡带以前是固定 80 像素，但两台机器的分辨率差很多（2880x1920 对
@@ -71,6 +72,18 @@ namespace LanMouseShare.Agent
         private bool _shutdownStarted;
         private bool _minimizeToTrayOnClose;
         private bool _blockScreenCorners;
+        // fix20：跨屏切到本机时是否在落点画一圈波纹（界面勾选框决定）。
+        private bool _screenEntryRippleEnabled = true;
+        // fix22：接收文件的落地目录（空 = 默认桌面）。只在 UI 线程写，落地判断在下方的 GetTransferDirectory 里做校验。
+        private string _incomingDirectory = string.Empty;
+        // fix20：上一次 SyncLinkFlags 看到的角色是不是 Target，用来识别"刚刚被接管"。
+        private bool _wasTargetRole;
+        /// <summary>
+        /// fix23：两次波纹之间的最短间隔。同一次跨屏里"变成 Target"和"收回本机"可能前后脚都触发，
+        /// 只留第一圈，避免用户看到重叠的两圈（fix21 被反馈的"多出一圈"就是这个）。
+        /// </summary>
+        private const int RippleMinGapMs = 600;
+        private DateTime _lastRippleUtc = DateTime.MinValue;
         private bool _startWithWindows;
         private bool _runAsAdministratorByDefault;
         private DateTime _lastEdgeTraceUtc = DateTime.MinValue;
@@ -122,18 +135,18 @@ namespace LanMouseShare.Agent
 
         // Owner-side return detection: pushing the physical mouse through the peer's return
         // edge is accumulated here so the return is instant instead of "rubbing for seconds".
-        private const int OwnerReturnPushThreshold = 140;
+        private const int OwnerReturnPushThreshold = 8;
         private const int MaxDeltaPerEvent = 120;
-        private const int OwnerReturnArmMs = 400;
+        private const int OwnerReturnArmMs = 0;
         private const int OwnerReturnPushWindowMs = 320;
-        // fix19：跨屏到对端后指针落在离返回边只有 8px 的位置（EdgeTransitionMapper.RemoteInset），
-        // 用户在左缘附近做一次快速左扫（实测 254px→0 只用 56ms）就会被旧逻辑判成"要回去"，
-        // 控制权被立刻收回本机，随后所有点击都在本机执行——这才是"右键菜单弹在 A 上"的真正原因。
-        // 现在要求：先真正进到对端 ≥40px（武装）、在返回边连续驻留 ≥260ms、累计推力 ≥140px
-        // 才允许回切；回切后 700ms 冷却，避免"回去—又进来—又回去"的乒乓。
-        private const int OwnerReturnArmDistance = 40;
-        private const int OwnerReturnDwellMs = 260;
-        private const int OwnerReturnCooldownMs = 700;
+        // fix24：用户反馈"从 A 到 B 一碰边就过去，从 B 到 A 要多走一段"，要求两边手感对称。
+        // 于是把 fix19 的等待式门槛（先推进 40px 武装、边缘驻留 260ms、冷却 700ms）全部去掉：
+        // 指针越过返回边、推力达到 8px 就立刻回切。真正防误触的责任交给
+        // EdgeTransitionMapper.RemoteInset（进场落点从 8px 挪到 40px），
+        // 快速扫过/手抖不再贴着返回边，因此不必再用计时器拖慢用户。
+        private const int OwnerReturnArmDistance = 0;
+        private const int OwnerReturnDwellMs = 0;
+        private const int OwnerReturnCooldownMs = 200;
         private const int PasteIdleTimeoutSeconds = 30;
         private const int PasteMaxSeconds = 1800;
         private int _ownerReturnPush;
@@ -538,6 +551,21 @@ namespace LanMouseShare.Agent
             CurrentRateText.Text = _mouseUpdateRateHz + "Hz";
             ClipboardEnabledBox.IsChecked = state.ClipboardEnabled;
             _clipboardEnabledCache = ClipboardEnabledBox.IsChecked == true;
+            _screenEntryRippleEnabled = state.ScreenEntryRippleEnabled;
+            if (ScreenEntryRippleBox != null)
+            {
+                ScreenEntryRippleBox.IsChecked = _screenEntryRippleEnabled;
+            }
+
+            // fix22：配置里的接收目录变了（含第一次拿到配置）就丢掉目录缓存，下一笔传输重新判定。
+            var incomingFromState = state.IncomingDirectory ?? string.Empty;
+            if (!string.Equals(incomingFromState, _incomingDirectory, StringComparison.Ordinal))
+            {
+                _incomingDirectory = incomingFromState;
+                _transferDirectoryCache = null;
+            }
+
+            UpdateTransferDirText();
             PauseHotkeyBox.Text = _pauseHotkey;
             StopHotkeyBox.Text = _stopControlHotkey;
             ExitHotkeyBox.Text = _exitHotkey;
@@ -1069,8 +1097,7 @@ namespace LanMouseShare.Agent
                 return;
             }
 
-            // 武装：指针必须先真正进到对端内部（离返回边 ≥40px）；刚进场落在 8px 处不算，
-            // 否则一进场就能被判成"又要回去"。
+            // fix24：不再要求"先推进 40px 武装"，进到对端后随时可以越边回切。
             if (GetOwnerReturnEdgeDistance(direction, x, y, maxX, maxY) >= OwnerReturnArmDistance)
             {
                 _ownerReturnArmed = true;
@@ -1100,11 +1127,8 @@ namespace LanMouseShare.Agent
                 " dwell=" + (int)(now - _ownerReturnEdgeSinceUtc).TotalMilliseconds +
                 " point=" + x + "," + y + " max=" + maxX + "," + maxY);
 
-            // fix19：光推力够不算数，还得在返回边上连续驻留够久。用户在对端左缘附近的一次
-            // 快速左扫（实测 254px→0 只用 56ms）会被挡掉；真想回去时压住边缘继续推，
-            // 累计推力与驻留时间会一起达标。
-            if (_ownerReturnPush < OwnerReturnPushThreshold ||
-                (now - _ownerReturnEdgeSinceUtc).TotalMilliseconds < OwnerReturnDwellMs)
+            // fix24：不再要求"在返回边连续驻留 260ms"，越过边 8px 即回切。
+            if (_ownerReturnPush < OwnerReturnPushThreshold)
             {
                 return;
             }
@@ -2597,6 +2621,11 @@ namespace LanMouseShare.Agent
             targetY = Clamp(targetY, localScreen.Top, localScreen.Bottom - 2);
 
             CursorController.SetPosition(targetX, targetY);
+
+            // fix23：控制权回到本机时也要画一圈——这时指针确实刚落到本机屏幕上，跟"变成 Target"一样需要提示。
+            // 与 target 触发共用 600ms 去抖（见 ShowScreenEntryRipple），所以一次跨屏只会出现一圈。
+            ShowScreenEntryRipple("local");
+
             ArmEdgeSwitch("return local");
             AppLog.Event("INFO", "screen.switch.back",
                 "direction=" + direction +
@@ -2986,6 +3015,7 @@ namespace LanMouseShare.Agent
         {
             // UI 线程上顺手把剪贴板开关镜像到 volatile 字段，供剪贴板线程/管道线程读取。
             _clipboardEnabledCache = ClipboardEnabledBox != null && ClipboardEnabledBox.IsChecked == true;
+            _screenEntryRippleEnabled = ScreenEntryRippleBox != null && ScreenEntryRippleBox.IsChecked == true;
             SaveSettingsAsync();
         }
 
@@ -3061,7 +3091,9 @@ namespace LanMouseShare.Agent
                 DebugToken = _debugToken,
                 VerboseLogging = _verboseLogging,
                 LogRetentionDays = _logRetentionDays,
-                LogTransferEnabled = _logTransferEnabled
+                LogTransferEnabled = _logTransferEnabled,
+                ScreenEntryRippleEnabled = _screenEntryRippleEnabled,
+                IncomingDirectory = _incomingDirectory ?? string.Empty
             };
             var json = ProtocolSerializer.ToJson(settings);
             ThreadPool.QueueUserWorkItem(delegate
@@ -3310,9 +3342,61 @@ namespace LanMouseShare.Agent
             }
 
             AppLog.Debug("control.link.sync", "reason=" + reason + " " + snapshot.Text());
+
+            // fix20/fix21：刚刚被对端接管（变成 Target）的那一刻，在被控端屏幕上给指针点个跟随波纹，
+            // 免得切过来找不到鼠标。只在"进入 Target"的边沿触发，持续停留不重复画。
+            var isTarget = snapshot.Role == ControlLinkRole.Target;
+            if (isTarget && !_wasTargetRole)
+            {
+                ShowScreenEntryRipple("target");
+            }
+
+            _wasTargetRole = isTarget;
+
             if (snapshot.Role != ControlLinkRole.Target)
             {
                 ReleaseInjectedKeys(reason);
+            }
+        }
+
+        /// <summary>
+        /// fix21：从指针当前位置起一圈跟随波纹（保持 1.6 秒、淡出到 2 秒）。
+        /// trigger 只用于日志区分："target" = 刚被对端接管，"local" = 控制权回到本机。
+        /// 开关关闭、非 UI 线程或取不到光标位置时静默跳过，绝不抛异常打扰输入链路。
+        /// </summary>
+        private void ShowScreenEntryRipple(string trigger)
+        {
+            if (!_screenEntryRippleEnabled)
+            {
+                return;
+            }
+
+            try
+            {
+                if (!Dispatcher.CheckAccess())
+                {
+                    Dispatcher.BeginInvoke(new Action(delegate { ShowScreenEntryRipple(trigger); }));
+                    return;
+                }
+
+                var now = DateTime.UtcNow;
+                var gapMs = (now - _lastRippleUtc).TotalMilliseconds;
+                if (gapMs < RippleMinGapMs)
+                {
+                    AppLog.Debug("ripple.skip", "trigger=" + trigger + " gap=" + (int)gapMs + "ms");
+                    return;
+                }
+
+                var dpi = VisualTreeHelper.GetDpi(this);
+                if (ScreenEntryRippleWindow.ShowAtCursor(dpi.DpiScaleX, dpi.DpiScaleY))
+                {
+                    _lastRippleUtc = now;
+                }
+                AppLog.Debug("ripple.show", "ripple=1 trigger=" + trigger);
+            }
+            catch (Exception ex)
+            {
+                AppLog.Debug("ripple.show.failed", ex.GetType().Name + ": " + ex.Message);
             }
         }
 
@@ -4333,17 +4417,33 @@ namespace LanMouseShare.Agent
             }
         }
 
-        private static string _transferDirectoryCache;
+        private string _transferDirectoryCache;
 
         /// <summary>
-        /// 接收目录：优先公共桌面，不可写就退到当前用户桌面/下载/LocalAppData。
+        /// 接收目录：用户自定义目录优先；没配或配了写不进去，就走默认候选链
+        /// （当前用户桌面 → 公共桌面 → 下载 → LocalAppData）。
         /// 必须与界面"打开接收文件夹"用同一个结果，否则会出现"传成功但找不到文件"。
         /// </summary>
-        private static string GetTransferDirectory()
+        private string GetTransferDirectory()
         {
             if (!string.IsNullOrEmpty(_transferDirectoryCache))
             {
                 return _transferDirectoryCache;
+            }
+
+            // fix22：自定义目录。每次现探一次可写性，U 盘拔掉/网络盘断线就退回默认，
+            // 并在日志里留下痕迹，避免"传了但用户找不到文件"。
+            if (!string.IsNullOrWhiteSpace(_incomingDirectory))
+            {
+                var custom = TryPrepareTransferDirectory(_incomingDirectory.Trim());
+                if (custom != null)
+                {
+                    AppLog.Info("transfer.dir.ready path=" + custom + " source=custom");
+                    _transferDirectoryCache = custom;
+                    return custom;
+                }
+
+                AppLog.Warn("transfer.dir.custom.invalid path=" + _incomingDirectory);
             }
 
             var candidates = new List<string>();
@@ -4412,6 +4512,92 @@ namespace LanMouseShare.Agent
             AppLog.Warn("transfer.dir.fallback path=" + fallback);
             _transferDirectoryCache = fallback;
             return fallback;
+        }
+
+        /// <summary>fix22：目录必须存在、且真的能写（拔掉的 U 盘、只读网络盘都在这里被挡下）。</summary>
+        private static string TryPrepareTransferDirectory(string path)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    return null;
+                }
+
+                var full = Path.GetFullPath(path);
+                Directory.CreateDirectory(full);
+                var probe = Path.Combine(full, ".lms-write-probe");
+                File.WriteAllText(probe, "1");
+                File.Delete(probe);
+                return full;
+            }
+            catch (Exception ex)
+            {
+                AppLog.Warn("transfer.dir.probe.failed path=" + path + " " + ex.GetType().Name + ": " + ex.Message);
+                return null;
+            }
+        }
+
+        /// <summary>fix22：把当前接收目录显示在"文件传输"卡片上（自定义时标明来源）。</summary>
+        private void UpdateTransferDirText()
+        {
+            if (TransferDirText == null)
+            {
+                return;
+            }
+
+            var custom = _incomingDirectory ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(custom))
+            {
+                TransferDirText.Text = "接收目录：默认（桌面）";
+                return;
+            }
+
+            TransferDirText.Text = "接收目录：" + custom + "（自定义，不可写时自动落到桌面）";
+        }
+
+        private void OnChangeTransferDirClicked(object sender, RoutedEventArgs e)
+        {
+            var dialog = new System.Windows.Forms.FolderBrowserDialog();
+            dialog.Description = "选择接收文件的保存目录";
+            dialog.ShowNewFolderButton = true;
+            if (!string.IsNullOrWhiteSpace(_incomingDirectory) && Directory.Exists(_incomingDirectory))
+            {
+                dialog.SelectedPath = _incomingDirectory;
+            }
+
+            var result = dialog.ShowDialog();
+            if (result != System.Windows.Forms.DialogResult.OK || string.IsNullOrWhiteSpace(dialog.SelectedPath))
+            {
+                return;
+            }
+
+            if (TryPrepareTransferDirectory(dialog.SelectedPath) == null)
+            {
+                Notify(UiText.TransferDirInvalid, dialog.SelectedPath);
+                return;
+            }
+
+            _incomingDirectory = dialog.SelectedPath;
+            _transferDirectoryCache = null;
+            UpdateTransferDirText();
+            SaveSettingsAsync();
+            AppLog.Event("INFO", "transfer.dir.changed", "path=" + _incomingDirectory);
+        }
+
+        private void OnResetTransferDirClicked(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(_incomingDirectory))
+            {
+                UpdateTransferDirText();
+                return;
+            }
+
+            _incomingDirectory = string.Empty;
+            _transferDirectoryCache = null;
+            UpdateTransferDirText();
+            SaveSettingsAsync();
+            AppLog.Event("INFO", "transfer.dir.reset", "path=default");
         }
 
         private void Notify(string title, string message)
