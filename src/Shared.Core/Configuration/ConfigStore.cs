@@ -82,7 +82,32 @@ namespace LanMouseShare.Core.Configuration
             {
                 config.MouseUpdateRateHz = 200;
             }
+
+            config.ShareRole = ShareRoleValues.Normalize(config.ShareRole);
+            if (config.ControllerAddress == null)
+            {
+                config.ControllerAddress = string.Empty;
+            }
+
+            if (config.DebugToken == null)
+            {
+                config.DebugToken = string.Empty;
+            }
+
+            if (config.LogRetentionDays <= 0)
+            {
+                config.LogRetentionDays = 3;
+            }
+
+            if (config.ConfigRevision < ConfigStoreSettingsRevision)
+            {
+                // Configs written before 0.1.50 have no such field; they default to shipping logs.
+                config.LogTransferEnabled = true;
+                config.ConfigRevision = ConfigStoreSettingsRevision;
+            }
         }
+
+        private const int ConfigStoreSettingsRevision = 50;
 
         public void Save(AppConfig config)
         {

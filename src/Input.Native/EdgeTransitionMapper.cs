@@ -4,7 +4,7 @@ namespace LanMouseShare.Input
 {
     public static class EdgeTransitionMapper
     {
-        private const int EdgeInset = 2;
+        private const int EdgeInset = 8;
         private const int RemoteInset = 8;
 
         public static Point MapEntryToRemote(Point entryPoint, Size localScreen, Size remoteScreen, string direction)

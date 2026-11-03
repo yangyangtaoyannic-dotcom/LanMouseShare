@@ -34,5 +34,23 @@ namespace LanMouseShare.Core.Ipc
 
         [DataMember(Order = 10)]
         public bool RunAsAdministratorByDefault { get; set; }
+
+        [DataMember(Order = 11)]
+        public string ShareRole { get; set; }
+
+        [DataMember(Order = 12)]
+        public string ControllerAddress { get; set; }
+
+        [DataMember(Order = 13)]
+        public string DebugToken { get; set; }
+
+        [DataMember(Order = 14)]
+        public bool VerboseLogging { get; set; }
+
+        [DataMember(Order = 15)]
+        public int LogRetentionDays { get; set; }
+
+        [DataMember(Order = 16)]
+        public bool LogTransferEnabled { get; set; }
     }
 }

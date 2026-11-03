@@ -1,4 +1,4 @@
-param(
+﻿param(
     [switch]$KeepConfig,
     [switch]$KeepStartup,
     [switch]$KeepInstalledFiles

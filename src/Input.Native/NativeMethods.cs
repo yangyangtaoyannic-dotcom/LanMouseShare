@@ -19,9 +19,15 @@ namespace LanMouseShare.Input
         public const int WM_MBUTTONDOWN = 0x0207;
         public const int WM_MBUTTONUP = 0x0208;
         public const int WM_MOUSEWHEEL = 0x020A;
+        public const int WM_XBUTTONDOWN = 0x020B;
+        public const int WM_XBUTTONUP = 0x020C;
         public const int VK_LBUTTON = 0x01;
         public const int VK_RBUTTON = 0x02;
         public const int VK_MBUTTON = 0x04;
+        public const int VK_XBUTTON1 = 0x05;
+        public const int VK_XBUTTON2 = 0x06;
+        public const int XBUTTON1 = 0x0001;
+        public const int XBUTTON2 = 0x0002;
         public const int MONITOR_DEFAULTTONEAREST = 0x00000002;
 
         public const int INPUT_MOUSE = 0;
@@ -37,6 +43,8 @@ namespace LanMouseShare.Input
         public const uint MOUSEEVENTF_RIGHTUP = 0x0010;
         public const uint MOUSEEVENTF_MIDDLEDOWN = 0x0020;
         public const uint MOUSEEVENTF_MIDDLEUP = 0x0040;
+        public const uint MOUSEEVENTF_XDOWN = 0x0080;
+        public const uint MOUSEEVENTF_XUP = 0x0100;
         public const uint MOUSEEVENTF_WHEEL = 0x0800;
         public const uint MOUSEEVENTF_ABSOLUTE = 0x8000;
         public const uint KEYEVENTF_EXTENDEDKEY = 0x0001;

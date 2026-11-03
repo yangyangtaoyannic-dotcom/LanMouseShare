@@ -7,3 +7,4 @@ buildcheck/
 *.cache
 *.log
 dist/
+.dsh/

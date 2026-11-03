@@ -25,7 +25,7 @@ namespace LanMouseShare.Agent
                 var elapsedMs = (DateTime.UtcNow - started).TotalMilliseconds;
                 if (!IsNoisyCommand(command) || elapsedMs > 80)
                 {
-                    AppLog.Info("Pipe connected. Command=" + command + " Ms=" + elapsedMs.ToString("0"));
+                    AppLog.Debug("pipe.send", "command=" + command + " ms=" + elapsedMs.ToString("0"));
                 }
                 pipe.ReadMode = PipeTransmissionMode.Byte;
                 WriteString(pipe, ProtocolSerializer.ToJson(request));

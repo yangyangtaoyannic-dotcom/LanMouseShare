@@ -103,7 +103,14 @@ namespace LanMouseShare.Input
                     payload.Button = message;
                     payload.IsDown = message == NativeMethods.WM_LBUTTONDOWN ||
                                      message == NativeMethods.WM_RBUTTONDOWN ||
-                                     message == NativeMethods.WM_MBUTTONDOWN;
+                                     message == NativeMethods.WM_MBUTTONDOWN ||
+                                     message == NativeMethods.WM_XBUTTONDOWN;
+                    // 鼠标侧键（XBUTTON1/XBUTTON2）走的是 WM_XBUTTONDOWN/UP，具体是哪一颗放在
+                    // mouseData 的高位，转发时借 Delta 带过去，否则对端不知道按的是前进还是后退。
+                    if (message == NativeMethods.WM_XBUTTONDOWN || message == NativeMethods.WM_XBUTTONUP)
+                    {
+                        payload.Delta = (int)((hook.mouseData >> 16) & 0xffff);
+                    }
                 }
 
                 if (OnInputCaptured(payload))

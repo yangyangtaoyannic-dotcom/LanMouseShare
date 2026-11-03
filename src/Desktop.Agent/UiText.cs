@@ -26,6 +26,7 @@ namespace LanMouseShare.Agent
         public const string FileSavedToDesktop = "\u6587\u4EF6\u5C06\u4FDD\u5B58\u5230\u684C\u9762 Mouse\u4F20\u8F93\u6587\u4EF6 \u6587\u4EF6\u5939\u3002";
         public const string FileTransferComplete = "\u6587\u4EF6\u4F20\u8F93\u5B8C\u6210";
         public const string FileSavedComplete = "\u5DF2\u4FDD\u5B58\u5230\u684C\u9762 Mouse\u4F20\u8F93\u6587\u4EF6 \u6587\u4EF6\u5939\u3002";
+        public const string FileTransferFailed = "\u6587\u4EF6\u4F20\u8F93\u5931\u8D25\uFF1A";
         public const string HotkeyDuplicate = "\u5FEB\u6377\u952E\u4E0D\u80FD\u91CD\u590D";
         public const string Restore = "\u6062\u590D";
         public const string Pause = "\u6682\u505C";
@@ -50,5 +51,13 @@ namespace LanMouseShare.Agent
         public const string TransferFolderName = "Mouse\u4F20\u8F93\u6587\u4EF6";
         public const string ConflictTitle = "\u68C0\u6D4B\u5230\u53EF\u80FD\u51B2\u7A81\u7684\u8F6F\u4EF6";
         public const string ConflictReturned = "\u76EE\u6807\u7A97\u53E3\u53EF\u80FD\u62E6\u622A\u6A21\u62DF\u8F93\u5165\uFF0C\u5DF2\u8FD4\u56DE\u672C\u673A\u63A7\u5236\u3002";
+        public const string SendFilesTitle = "\u9009\u62E9\u8981\u53D1\u9001\u7684\u6587\u4EF6";
+        public const string TransferSending = "\u6B63\u5728\u53D1\u9001";
+        public const string TransferReceiving = "\u6B63\u5728\u63A5\u6536";
+        public const string TransferSent = "\u5DF2\u53D1\u9001";
+        public const string TransferReceived = "\u5DF2\u63A5\u6536";
+        public const string Uninstall = "\u5378\u8F7D LAN Mouse Share\u2026";
+        public const string UninstallConfirm = "\u8981\u5378\u8F7D LAN Mouse Share \u5417\uFF1F\r\n\r\n\u5378\u8F7D\u4F1A\u5148\u9000\u51FA\u5F53\u524D\u7A0B\u5E8F\uFF0C\u518D\u6253\u5F00\u5378\u8F7D\u5411\u5BFC\uFF08\u5176\u4E2D\u53EF\u4EE5\u9009\u62E9\u662F\u5426\u4FDD\u7559\u914D\u7F6E\u4E0E\u65E5\u5FD7\uFF09\u3002";
+        public const string UninstallNotFound = "\u627E\u4E0D\u5230\u5378\u8F7D\u7A0B\u5E8F LanMouseShareSetup.exe\u3002\r\n\r\n\u5F53\u524D\u53EF\u80FD\u662F\u76F4\u63A5\u8FD0\u884C\u7684\u6D4B\u8BD5\u7248\uFF0C\u53EF\u4EE5\u76F4\u63A5\u5220\u9664\u7A0B\u5E8F\u76EE\u5F55\u3002";
     }
 }

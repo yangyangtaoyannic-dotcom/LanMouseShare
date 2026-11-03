@@ -11,6 +11,7 @@
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <UseWPF>true</UseWPF>
+    <ApplicationIcon>Resources\app.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -31,6 +32,9 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xaml" />
     <Reference Include="WindowsBase" />
@@ -62,17 +66,40 @@
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="ClipboardMonitor.cs" />
     <Compile Include="ClipboardSyncService.cs" />
+    <Compile Include="ClipboardWorker.cs" />
     <Compile Include="DirectInputChannel.cs" />
     <Compile Include="FileDropSender.cs" />
+    <Compile Include="FileLink\FileLinkClient.cs" />
+    <Compile Include="FileLink\FileLinkHub.cs" />
+    <Compile Include="FileLink\FileLinkProtocol.cs" />
+    <Compile Include="FileLink\FileLinkServer.cs" />
     <Compile Include="ForegroundWindowInspector.cs" />
     <Compile Include="PipeClient.cs" />
     <Compile Include="RawMouseInputMonitor.cs" />
     <Compile Include="RemoteInputSender.cs" />
+    <Compile Include="SendRequestChannel.cs" />
+    <Compile Include="ShellContextMenu.cs" />
     <Compile Include="StartupTaskManager.cs" />
     <Compile Include="UiText.cs" />
+    <Compile Include="VirtualFileClipboard.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </Compile>
+    <!-- 0.2.0 新控制器架构（ControllerIntegration + Controllers\*.cs）尚未完成：
+         它们依赖尚未实现的 InputInjector/AppLog API，且主程序（MainWindow/App）未引用它们。
+         beta-fix1 暂时排除编译，文件保留在源码中，等重构完成后再启用。
+    <Compile Include="ControllerIntegration.cs" />
+    <Compile Include="Controllers\ControlFlowController.cs" />
+    <Compile Include="Controllers\EdgeDetectionController.cs" />
+    <Compile Include="Controllers\RemoteControlController.cs" />
+    <Compile Include="Controllers\InputForwardingController.cs" />
+    <Compile Include="Controllers\AdaptiveEdgeReturnDetector.cs" />
+    <Compile Include="Controllers\FileTransferManager.cs" />
+    -->
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <ItemGroup>
+    <!-- fix18：应用图标，供窗口 Icon 与托盘在运行时加载 -->
+    <Resource Include="Resources\app.ico" />
+  </ItemGroup>
 </Project>

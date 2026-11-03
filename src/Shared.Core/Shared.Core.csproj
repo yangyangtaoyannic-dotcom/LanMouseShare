@@ -33,6 +33,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="BuildInfo.cs" />
+    <Compile Include="Control\ControlChannelCodec.cs" />
+    <Compile Include="Control\ControlLinkMachine.cs" />
     <Compile Include="Control\ControlSessionController.cs" />
     <Compile Include="Control\InjectionFailureTracker.cs" />
     <Compile Include="Control\InputRoutingController.cs" />
@@ -43,15 +46,19 @@
     <Compile Include="Crypto\SecureChannelProtector.cs" />
     <Compile Include="Crypto\SecureRandom.cs" />
     <Compile Include="Diagnostics\AppLog.cs" />
+    <Compile Include="Diagnostics\LogProtocol.cs" />
+    <Compile Include="Diagnostics\SystemInfoReport.cs" />
     <Compile Include="Ipc\AgentCommand.cs" />
     <Compile Include="Ipc\AgentSettingsDto.cs" />
     <Compile Include="Ipc\PipeConstants.cs" />
     <Compile Include="Ipc\PeerStateDto.cs" />
     <Compile Include="Networking\DiscoveryPacket.cs" />
+    <Compile Include="Networking\TrafficPriority.cs" />
     <Compile Include="Networking\UdpDiscoveryService.cs" />
     <Compile Include="Protocol\ClipboardPayload.cs" />
     <Compile Include="Protocol\ControlPayload.cs" />
     <Compile Include="Protocol\FileTransferPayload.cs" />
+    <Compile Include="Protocol\HeartbeatPayload.cs" />
     <Compile Include="Protocol\InputPayload.cs" />
     <Compile Include="Protocol\PairingPayload.cs" />
     <Compile Include="Protocol\ProtocolEnvelope.cs" />

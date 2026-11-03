@@ -60,6 +60,30 @@ namespace LanMouseShare.Core.Configuration
         [DataMember(Order = 18)]
         public int MouseUpdateRateHz { get; set; }
 
+        [DataMember(Order = 19)]
+        public string ShareRole { get; set; }
+
+        [DataMember(Order = 20)]
+        public string ControllerAddress { get; set; }
+
+        [DataMember(Order = 21)]
+        public string DebugToken { get; set; }
+
+        [DataMember(Order = 22)]
+        public bool VerboseLogging { get; set; }
+
+        [DataMember(Order = 23)]
+        public int LogRetentionDays { get; set; }
+
+        [DataMember(Order = 24)]
+        public bool LogTransferEnabled { get; set; }
+
+        [DataMember(Order = 25)]
+        public int ConfigRevision { get; set; }
+
+        [DataMember(Order = 26)]
+        public bool UseNewControllers { get; set; }
+
         public static AppConfig CreateDefault(string deviceId, string deviceName, byte[] protectedLocalSecret)
         {
             return new AppConfig
@@ -79,8 +103,37 @@ namespace LanMouseShare.Core.Configuration
                 BlockScreenCorners = false,
                 RunAsAdministratorByDefault = false,
                 MouseSpeedMultiplier = 1.0,
-                MouseUpdateRateHz = 200
+                MouseUpdateRateHz = 200,
+                ShareRole = ShareRoleValues.Controller,
+                ControllerAddress = string.Empty,
+                DebugToken = string.Empty,
+                VerboseLogging = false,
+                LogRetentionDays = 3,
+                LogTransferEnabled = true,
+                ConfigRevision = 50,
+                UseNewControllers = true
             };
+        }
+    }
+
+    public static class ShareRoleValues
+    {
+        public const string Controller = "Controller";
+        public const string Agent = "Agent";
+
+        public static string Normalize(string role)
+        {
+            if (string.Equals(role, Agent, System.StringComparison.OrdinalIgnoreCase))
+            {
+                return Agent;
+            }
+
+            return Controller;
+        }
+
+        public static string DisplayName(string role)
+        {
+            return Normalize(role) == Agent ? "\u88AB\u63A7\u7AEF" : "\u4E3B\u63A7\u7AEF";
         }
     }
 
@@ -111,5 +164,9 @@ namespace LanMouseShare.Core.Configuration
     {
         [DataMember(Order = 1)]
         public string PeerDirection { get; set; }
+
+        /// <summary>边角阻挡开关随布局同步（问题③修复）：null 表示本次不携带该字段。</summary>
+        [DataMember(Order = 2)]
+        public bool? BlockScreenCorners { get; set; }
     }
 }

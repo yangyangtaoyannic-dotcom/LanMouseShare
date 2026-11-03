@@ -31,7 +31,7 @@ namespace LanMouseShare.Input
             }
             else if (payload.Kind == InputKinds.MouseButton)
             {
-                return InjectMouseButton(payload.Button, payload.IsDown);
+                return InjectMouseButton(payload.Button, payload.IsDown, payload.Delta);
             }
 
             return InputInjectionResult.Succeeded();
@@ -39,14 +39,16 @@ namespace LanMouseShare.Input
 
         public void ReleaseLeftMouseButton()
         {
-            InjectMouseButton(NativeMethods.WM_LBUTTONUP, false);
+            InjectMouseButton(NativeMethods.WM_LBUTTONUP, false, 0);
         }
 
         public void ReleaseAllMouseButtons()
         {
-            InjectMouseButton(NativeMethods.WM_LBUTTONUP, false);
-            InjectMouseButton(NativeMethods.WM_RBUTTONUP, false);
-            InjectMouseButton(NativeMethods.WM_MBUTTONUP, false);
+            InjectMouseButton(NativeMethods.WM_LBUTTONUP, false, 0);
+            InjectMouseButton(NativeMethods.WM_RBUTTONUP, false, 0);
+            InjectMouseButton(NativeMethods.WM_MBUTTONUP, false, 0);
+            InjectMouseButton(NativeMethods.WM_XBUTTONUP, false, NativeMethods.XBUTTON1);
+            InjectMouseButton(NativeMethods.WM_XBUTTONUP, false, NativeMethods.XBUTTON2);
         }
 
         private static InputInjectionResult InjectKey(InputPayload payload)
@@ -112,9 +114,10 @@ namespace LanMouseShare.Input
             return Send(input);
         }
 
-        private static InputInjectionResult InjectMouseButton(int message, bool isDown)
+        private static InputInjectionResult InjectMouseButton(int message, bool isDown, int xbutton)
         {
             uint flags = 0;
+            uint mouseData = 0;
             if (message == NativeMethods.WM_LBUTTONDOWN || message == NativeMethods.WM_LBUTTONUP)
             {
                 flags = isDown ? NativeMethods.MOUSEEVENTF_LEFTDOWN : NativeMethods.MOUSEEVENTF_LEFTUP;
@@ -127,11 +130,18 @@ namespace LanMouseShare.Input
             {
                 flags = isDown ? NativeMethods.MOUSEEVENTF_MIDDLEDOWN : NativeMethods.MOUSEEVENTF_MIDDLEUP;
             }
+            else if (message == NativeMethods.WM_XBUTTONDOWN || message == NativeMethods.WM_XBUTTONUP)
+            {
+                // 侧键：前进/后退各一颗，按下还是抬起由 isDown 决定，哪一颗放在 mouseData 里。
+                flags = isDown ? NativeMethods.MOUSEEVENTF_XDOWN : NativeMethods.MOUSEEVENTF_XUP;
+                mouseData = (uint)(xbutton == NativeMethods.XBUTTON2 ? NativeMethods.XBUTTON2 : NativeMethods.XBUTTON1);
+            }
 
             if (flags != 0)
             {
                 var input = new NativeMethods.INPUT();
                 input.type = NativeMethods.INPUT_MOUSE;
+                input.u.mi.mouseData = mouseData;
                 input.u.mi.dwFlags = flags;
                 return Send(input);
             }

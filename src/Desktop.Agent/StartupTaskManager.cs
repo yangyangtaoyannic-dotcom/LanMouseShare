@@ -28,16 +28,41 @@ namespace LanMouseShare.Agent
 
         public static void ApplyStartup(bool startWithWindows, bool runAsAdministratorByDefault, string agentPath)
         {
-            if (runAsAdministratorByDefault)
+            // A Run key entry starts the agent with the caller token. When the agent needs to capture
+            // input it must run elevated, and a Run key cannot do that without a UAC prompt at every
+            // logon - which users read as "start with Windows does not work". So whenever we are
+            // already elevated, prefer a highest-privilege scheduled task and drop the Run value.
+            var elevated = IsCurrentProcessAdministrator();
+            var useTask = startWithWindows && (runAsAdministratorByDefault || elevated);
+            if (useTask)
             {
-                ConfigureRegistryStartup(false, agentPath);
-                ConfigureAdminStartupTask(startWithWindows, agentPath);
+                // 先创建计划任务，成功后再删 Run 键；创建失败（例如 Win7 上旧代码
+                // 无密码建任务被拒、非交互会话等）回退写 Run 键，保证开机启动始终
+                // 至少有一条注册项生效（问题②修复）。
+                var taskCreated = false;
+                try
+                {
+                    ConfigureAdminStartupTask(true, agentPath);
+                    taskCreated = true;
+                }
+                catch (Exception ex)
+                {
+                    AppLog.Warn("startup.task.create.failed, fallback to run key. Error=" + ex.Message);
+                }
+
+                ConfigureRegistryStartup(!taskCreated, agentPath);
             }
             else
             {
                 DeleteAdminStartupTask();
                 ConfigureRegistryStartup(startWithWindows, agentPath);
             }
+
+            AppLog.Event("INFO", "startup.applied",
+                "startWithWindows=" + startWithWindows +
+                " runAsAdmin=" + runAsAdministratorByDefault +
+                " elevated=" + elevated +
+                " mode=" + (useTask ? "scheduled-task" : "run-key"));
         }
 
         public static void ConfigureRegistryStartup(bool enabled, string agentPath)
@@ -46,7 +71,8 @@ namespace LanMouseShare.Agent
             {
                 if (enabled)
                 {
-                    key.SetValue(RunValueName, "\"" + agentPath + "\"");
+                    // 添加 /minimized 参数实现静默启动
+                    key.SetValue(RunValueName, "\"" + agentPath + "\" /minimized");
                 }
                 else
                 {
@@ -74,9 +100,12 @@ namespace LanMouseShare.Agent
 
             public static string BuildCreateTaskArguments(string agentPath, string user)
             {
+                // /IT：仅用户交互登录时运行——官方支持的免密创建方式（Win7 无 /IT
+                // 且不带 /RP 时 schtasks 会要求密码并失败）。/RL HIGHEST 保持提权。
+                // 添加 /minimized 参数实现静默启动
                 return "/Create /TN \"" + AdminTaskName + "\" " +
-                       "/TR \"\\\"" + agentPath + "\\\"\" " +
-                       "/SC ONLOGON /RL HIGHEST /F /RU \"" + user + "\"";
+                       "/TR \"\\\"" + agentPath + "\\\" /minimized\" " +
+                       "/SC ONLOGON /IT /RL HIGHEST /F /RU \"" + user + "\"";
             }
 
             public static string BuildDeleteTaskArguments()

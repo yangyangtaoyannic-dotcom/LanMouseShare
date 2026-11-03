@@ -28,8 +28,15 @@ namespace LanMouseShare.Core.Ipc
         public const string ResumeControl = "ResumeControl";
         public const string SendInput = "SendInput";
         public const string SendInputBatch = "SendInputBatch";
+        public const string SendControlLease = "SendControlLease";
+        public const string SendControlLeaseAck = "SendControlLeaseAck";
         public const string SendClipboard = "SendClipboard";
         public const string SendFiles = "SendFiles";
+        public const string RequestClipboardFiles = "RequestClipboardFiles";
+
+        public const string FetchClipboardFile = "FetchClipboardFile";
+        public const string RequestClipboardPaste = "RequestClipboardPaste";
+        public const string CancelTransfers = "CancelTransfers";
         public const string PollEvents = "PollEvents";
         public const string ShutdownService = "ShutdownService";
     }

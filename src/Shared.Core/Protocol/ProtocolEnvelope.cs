@@ -51,14 +51,21 @@ namespace LanMouseShare.Core.Protocol
         public const string ControlTargetChanged = "ControlTargetChanged";
         public const string ControlPause = "ControlPause";
         public const string ControlResume = "ControlResume";
+        public const string ControlLease = "ControlLease";
+        public const string ControlLeaseAck = "ControlLeaseAck";
         public const string LayoutUpdate = "LayoutUpdate";
         public const string ScreenInfoUpdate = "ScreenInfoUpdate";
         public const string InputEvent = "InputEvent";
         public const string InputBatch = "InputBatch";
         public const string ClipboardUpdate = "ClipboardUpdate";
+
+        /// <summary>Asks the copying side to stream the files it announced on the clipboard.</summary>
+        public const string ClipboardPull = "ClipboardPull";
+        public const string ClipboardPasteRequest = "ClipboardPasteRequest";
         public const string FileOffer = "FileOffer";
         public const string FileStreamStart = "FileStreamStart";
         public const string FileComplete = "FileComplete";
+        public const string FileProgress = "FileProgress";
         public const string Heartbeat = "Heartbeat";
     }
 }

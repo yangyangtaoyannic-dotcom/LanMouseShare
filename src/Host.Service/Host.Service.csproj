@@ -37,6 +37,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="Diagnostics\LogCollector.cs" />
+    <Compile Include="Diagnostics\LogForwarder.cs" />
+    <Compile Include="Diagnostics\LogHub.cs" />
     <Compile Include="LanMouseShareInstaller.cs" />
     <Compile Include="LanMouseShareService.cs" />
     <Compile Include="NamedPipeCommandServer.cs" />

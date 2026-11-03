@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Threading;
 using LanMouseShare.Core.Ipc;
 using LanMouseShare.Core.Diagnostics;
@@ -12,6 +13,17 @@ namespace LanMouseShare.Agent
         private readonly PipeClient _pipe;
         private readonly DirectInputChannel _directInput;
         private readonly object _sync = new object();
+        private long _framesSent;
+        private long _bytesSent;
+        private long _udpSends;
+        private long _relaySends;
+        private long _udpFailures;
+        private DateTime _lastUdpFailureLogUtc = DateTime.MinValue;
+        private long _rateWindowFrames;
+        private long _rateWindowBytes;
+        private DateTime _rateWindowStartUtc = DateTime.UtcNow;
+        private double _framesPerSecond;
+        private double _bytesPerSecond;
         private readonly Queue<InputPayload> _queue = new Queue<InputPayload>();
         private readonly AutoResetEvent _signal = new AutoResetEvent(false);
         private readonly Thread _worker;
@@ -19,6 +31,9 @@ namespace LanMouseShare.Agent
         private InputPayload _latestMouseMove;
         private int _pendingRelativeX;
         private int _pendingRelativeY;
+        private DateTime _pendingRelativeStartUtc = DateTime.MinValue;
+        private long _droppedBacklogEvents;
+        private int _maxRelativeStep = 160;
         private int _mouseSendIntervalMs = 5;
         private DateTime _lastMouseMoveSentUtc = DateTime.MinValue;
         private DateTime _backoffUntilUtc = DateTime.MinValue;
@@ -96,8 +111,19 @@ namespace LanMouseShare.Agent
                 }
                 else if (payload.Kind == InputKinds.MouseMoveRelative)
                 {
+                    if (_pendingRelativeX == 0 && _pendingRelativeY == 0)
+                    {
+                        _pendingRelativeStartUtc = DateTime.UtcNow;
+                    }
+
                     _pendingRelativeX += payload.X;
                     _pendingRelativeY += payload.Y;
+                    // Keep any single step bounded: a stalled link must never turn into a
+                    // multi-second pointer jump when it recovers.
+                    if (_pendingRelativeX > _maxRelativeStep) { _pendingRelativeX = _maxRelativeStep; }
+                    if (_pendingRelativeX < -_maxRelativeStep) { _pendingRelativeX = -_maxRelativeStep; }
+                    if (_pendingRelativeY > _maxRelativeStep) { _pendingRelativeY = _maxRelativeStep; }
+                    if (_pendingRelativeY < -_maxRelativeStep) { _pendingRelativeY = -_maxRelativeStep; }
                 }
                 else
                 {
@@ -146,15 +172,35 @@ namespace LanMouseShare.Agent
                 if ((_pendingRelativeX != 0 || _pendingRelativeY != 0) &&
                     (now - _lastMouseMoveSentUtc).TotalMilliseconds >= intervalMs)
                 {
-                    relativeMove = new InputPayload
+                    // Movement that has been waiting too long is stale: sending it after a
+                    // network stall is exactly the "nothing happens, then everything replays"
+                    // effect. Drop it and let the pointer continue from where it is now.
+                    if (_pendingRelativeStartUtc != DateTime.MinValue &&
+                        (now - _pendingRelativeStartUtc).TotalMilliseconds > 150)
                     {
-                        Kind = InputKinds.MouseMoveRelative,
-                        X = _pendingRelativeX,
-                        Y = _pendingRelativeY
-                    };
-                    _pendingRelativeX = 0;
-                    _pendingRelativeY = 0;
-                    _lastMouseMoveSentUtc = now;
+                        var staleMs = (int)(now - _pendingRelativeStartUtc).TotalMilliseconds;
+                        _droppedBacklogEvents++;
+                        _pendingRelativeX = 0;
+                        _pendingRelativeY = 0;
+                        _pendingRelativeStartUtc = DateTime.MinValue;
+                        AppLog.Debug("input.drop.backlog",
+                            "staleRelativeMs=" + staleMs +
+                            " dropped=" + _droppedBacklogEvents);
+                    }
+
+                    if (_pendingRelativeX != 0 || _pendingRelativeY != 0)
+                    {
+                        relativeMove = new InputPayload
+                        {
+                            Kind = InputKinds.MouseMoveRelative,
+                            X = _pendingRelativeX,
+                            Y = _pendingRelativeY
+                        };
+                        _pendingRelativeX = 0;
+                        _pendingRelativeY = 0;
+                        _pendingRelativeStartUtc = DateTime.MinValue;
+                        _lastMouseMoveSentUtc = now;
+                    }
                 }
             }
 
@@ -186,10 +232,27 @@ namespace LanMouseShare.Agent
             {
                 if (_directInput != null && _directInput.Send(payloads))
                 {
+                    _udpSends++;
+                    RecordSent(payloads.Length, _directInput.LastFrameBytes);
                     return;
                 }
 
-                _pipe.Send(AgentCommands.SendInputBatch, ProtocolSerializer.ToJson(new InputBatchPayload { Events = payloads }), PipeConstants.InputTimeoutMs);
+                if (_directInput != null)
+                {
+                    _udpFailures++;
+                    var now = DateTime.UtcNow;
+                    if ((now - _lastUdpFailureLogUtc).TotalSeconds >= 5)
+                    {
+                        _lastUdpFailureLogUtc = now;
+                        AppLog.Warn("input.udp.fail sends=" + _udpSends + " fails=" + _udpFailures +
+                            " hasPeer=" + (_directInput.HasPeer ? "1" : "0") + " fallback=relay");
+                    }
+                }
+
+                _relaySends++;
+                var json = ProtocolSerializer.ToJson(new InputBatchPayload { Events = payloads });
+                _pipe.Send(AgentCommands.SendInputBatch, json, PipeConstants.InputTimeoutMs);
+                RecordSent(payloads.Length, Encoding.UTF8.GetByteCount(json));
             }
             catch (Exception ex)
             {
@@ -209,6 +272,42 @@ namespace LanMouseShare.Agent
                     handler(this, EventArgs.Empty);
                 }
             }
+        }
+
+        public string StatsText
+        {
+            get
+            {
+                return "input tx " + _framesPerSecond.ToString("F0") + " fps / " + (_bytesPerSecond / 1024.0).ToString("F1") + " KB/s";
+            }
+        }
+
+        private void RecordSent(int eventCount, int frameBytes)
+        {
+            _framesSent++;
+            _rateWindowFrames++;
+            if (frameBytes > 0)
+            {
+                _bytesSent += frameBytes;
+                _rateWindowBytes += frameBytes;
+            }
+
+            var elapsed = (DateTime.UtcNow - _rateWindowStartUtc).TotalMilliseconds;
+            if (elapsed < 10000.0)
+            {
+                return;
+            }
+
+            _framesPerSecond = _rateWindowFrames * 1000.0 / elapsed;
+            _bytesPerSecond = _rateWindowBytes * 1000.0 / elapsed;
+            _rateWindowFrames = 0;
+            _rateWindowBytes = 0;
+            _rateWindowStartUtc = DateTime.UtcNow;
+            AppLog.Event("INFO", "input.tx.rate",
+                "fps=" + _framesPerSecond.ToString("F1") +
+                " kbps=" + (_bytesPerSecond * 8.0 / 1024.0).ToString("F1") +
+                " udp=" + _udpSends + " relay=" + _relaySends + " udpFail=" + _udpFailures +
+                " frames=" + _framesSent + " bytes=" + _bytesSent);
         }
 
         public void Clear()

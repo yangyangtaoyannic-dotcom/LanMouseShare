@@ -29,7 +29,9 @@ namespace LanMouseShare.Input
         {
             return IsLeftMouseButtonPhysicallyDown() ||
                    IsRightMouseButtonPhysicallyDown() ||
-                   IsMiddleMouseButtonPhysicallyDown();
+                   IsMiddleMouseButtonPhysicallyDown() ||
+                   IsKeyDown(NativeMethods.VK_XBUTTON1) ||
+                   IsKeyDown(NativeMethods.VK_XBUTTON2);
         }
 
         public static bool IsLeftMouseButtonPhysicallyDown()
